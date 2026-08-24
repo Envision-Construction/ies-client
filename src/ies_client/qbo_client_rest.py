@@ -148,7 +148,19 @@ def post(entity, payload, company=None):
         url, data=json.dumps(payload).encode(), method="POST",
         headers={"Authorization": f"Bearer {acc}", "Accept": "application/json", "Content-Type": "application/json"},
     )
-    return json.loads(urllib.request.urlopen(req).read())
+    try:
+        return json.loads(urllib.request.urlopen(req).read())
+    except urllib.error.HTTPError as e:
+        # Bare str(e) is just "HTTP Error 400: Bad Request" -- discards
+        # QBO's actual Fault detail. Found live 2026-08-24: gcpay-sync's
+        # qbo_sync.py --live run in Cloud Run imports post() from THIS
+        # module (qbo_client_rest, used whenever the GCE metadata server
+        # is reachable) rather than its own local gcpay_sync/qbo_client.py
+        # fallback copy -- a matching fix there alone did nothing for the
+        # deployed job. 9 PurchaseOrder creates on PRI-24-00071 all failed
+        # with this generic message and no way to tell them apart.
+        body = e.read().decode(errors="replace")
+        raise urllib.error.HTTPError(e.url, e.code, f"{e.reason} -- body: {body}", e.headers, None) from None
 
 
 if __name__ == "__main__":
