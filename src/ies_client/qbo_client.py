@@ -7,11 +7,13 @@ bare-container Cloud Run jobs (no `gcloud`, no extra pip deps), use
 `qbo_client_rest.py` instead -- same public shape, built on the GCE metadata
 server + raw Secret Manager REST calls.
 
-Multi-entity: the IES account has one Intuit app (shared qbo-client-id/secret)
-connected to multiple company files. Select with company="envision" (default)
-or company="enspire", or set QBO_COMPANY in the environment. Per-company
-realm/refresh-token secrets and token caches keep the entities isolated —
-IAM on the per-company secrets is the access-control boundary.
+Multi-entity: envision and enspire connect through SEPARATE Intuit Developer
+apps (split 2026-08-26 — previously shared one app's client_id/secret across
+both company files). Select with company="envision" (default) or
+company="enspire", or set QBO_COMPANY in the environment. Per-company
+realm/refresh-token/client-credential secrets and token caches keep the
+entities fully isolated — IAM on the per-company secrets is the
+access-control boundary.
 
 Consumers as of 2026-08-18: gcpay-sync, qbo-envision-bq-sync, qbo-token-refresher.
 Originally lived inside gcpay-sync's own package; extracted here because it has
@@ -25,8 +27,10 @@ GCLOUD = shutil.which("gcloud")
 
 COMPANIES = {
     "envision": {"realm": "qbo-realm-id", "refresh": "qbo-refresh-token",
+                 "client_id": "qbo-client-id", "client_secret": "qbo-client-secret",
                  "cache": ".qbo_token_cache.json"},
     "enspire": {"realm": "qbo-enspire-realm-id", "refresh": "qbo-enspire-refresh-token",
+                "client_id": "qbo-enspire-client-id", "client_secret": "qbo-enspire-client-secret",
                 "cache": ".qbo_token_cache_enspire.json"},
 }
 DEFAULT_COMPANY = os.environ.get("QBO_COMPANY", "envision").lower()
@@ -82,7 +86,7 @@ def get_access(company=None):
                 return c["access"], realm
         except Exception:
             pass
-    cid, csec = _rd("qbo-client-id"), _rd("qbo-client-secret")
+    cid, csec = _rd(cfg["client_id"]), _rd(cfg["client_secret"])
     basic = base64.b64encode(f"{cid}:{csec}".encode()).decode()
     last_err = None
     for ver in _versions(cfg["refresh"]):
