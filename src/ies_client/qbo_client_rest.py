@@ -13,7 +13,9 @@ qbo-token-refresher: it only ever read `latest` once and gave up on the
 first invalid_grant with no retry).
 
 Multi-entity: same COMPANIES convention as qbo_client.py -- company="envision"
-(default) or "enspire", or set QBO_COMPANY in the environment.
+(default) or "enspire", or set QBO_COMPANY in the environment. envision and
+enspire connect through SEPARATE Intuit Developer apps (split 2026-08-26) --
+each company's own client_id/client_secret secret, not a shared pair.
 
 Drop this file's content into a job's SCRIPT_B64 alongside job-specific logic
 (these jobs bake the whole script into an env var at deploy time -- there's
@@ -36,8 +38,10 @@ SM_BASE = f"https://secretmanager.googleapis.com/v1/projects/{PROJECT}/secrets"
 INTUIT_TOKEN_URL = "https://oauth.platform.intuit.com/oauth2/v1/tokens/bearer"
 
 COMPANIES = {
-    "envision": {"realm": "qbo-realm-id", "refresh": "qbo-refresh-token"},
-    "enspire": {"realm": "qbo-enspire-realm-id", "refresh": "qbo-enspire-refresh-token"},
+    "envision": {"realm": "qbo-realm-id", "refresh": "qbo-refresh-token",
+                 "client_id": "qbo-client-id", "client_secret": "qbo-client-secret"},
+    "enspire": {"realm": "qbo-enspire-realm-id", "refresh": "qbo-enspire-refresh-token",
+                "client_id": "qbo-enspire-client-id", "client_secret": "qbo-enspire-client-secret"},
 }
 DEFAULT_COMPANY = os.environ.get("QBO_COMPANY", "envision").lower()
 
@@ -110,7 +114,7 @@ def get_access(company=None):
     name, cfg = _company(company)
     gtok = _gce_token()
     realm = _sm_get(gtok, cfg["realm"])
-    cid, csec = _sm_get(gtok, "qbo-client-id"), _sm_get(gtok, "qbo-client-secret")
+    cid, csec = _sm_get(gtok, cfg["client_id"]), _sm_get(gtok, cfg["client_secret"])
     basic = base64.b64encode(f"{cid}:{csec}".encode()).decode()
 
     last_err = None
