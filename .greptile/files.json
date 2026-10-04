@@ -1,0 +1,29 @@
+{
+  "files": [
+    {
+      "path": "AGENTS.md",
+      "description": "Consult when a change touches any file: defines what ies-client is and is not, its layout, release model and local invariants.",
+      "scope": ["**/*"]
+    },
+    {
+      "path": "README.md",
+      "description": "Consult when a change touches secret access, IAM or how consumers install and import the package: defines the rotation safety pattern, the IAM roles on the refresh-token secrets and the install line.",
+      "scope": ["src/ies_client/**", "pyproject.toml"]
+    },
+    {
+      "path": "src/ies_client/qbo_client_rest.py",
+      "description": "Consult when a change touches the gcloud variant: the REST variant defines the same public API and rotation steps, which stay in parity.",
+      "scope": ["src/ies_client/qbo_client.py"]
+    },
+    {
+      "path": "src/ies_client/qbo_client.py",
+      "description": "Consult when a change touches the REST variant: the gcloud variant defines the same public API and rotation steps, which stay in parity.",
+      "scope": ["src/ies_client/qbo_client_rest.py"]
+    },
+    {
+      "path": "pyproject.toml",
+      "description": "Consult when a change adds an import or touches packaging: defines the package name, the src layout and the empty dependency list.",
+      "scope": ["src/ies_client/**"]
+    }
+  ]
+}
