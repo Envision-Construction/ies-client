@@ -1,0 +1,67 @@
+{
+  "strictness": 2,
+  "commentTypes": ["logic", "syntax"],
+  "autoReview": ["open", "push"],
+  "statusCheck": true,
+  "fixWithAI": true,
+  "includeBranches": ["main"],
+  "excludeAuthors": ["*[bot]"],
+  "disabledLabels": ["no-greptile"],
+  "ignorePatterns": "**/*.lock\n**/pnpm-lock.yaml\n**/package-lock.json\n**/uv.lock\n**/__pycache__/**\n**/*.log\n**/.DS_Store\n**/*.png\n**/*.jpg\n**/*.svg\n**/*.mp4\n.planning/**",
+  "summarySection": { "included": true, "collapsible": true, "defaultOpen": true },
+  "confidenceScoreSection": { "included": true },
+  "sequenceDiagramSection": { "included": false },
+  "context": { "repos": [] },
+  "instructions": "ies-client is a stdlib-only Python library that issues Intuit Enterprise Suite (QuickBooks Online) access tokens for a named entity and rotates that entity's refresh token in Secret Manager. Its constitution is AGENTS.md, listed in files.json. Portfolio-wide rules arrive from the organization layer as [envision-*] records and are not restated here; this folder holds only rules local to ies-client.",
+  "rules": [
+    {
+      "id": "ies-client-rotate-before-return",
+      "severity": "high",
+      "scope": ["src/ies_client/qbo_client.py", "src/ies_client/qbo_client_rest.py"],
+      "rule": "A violating diff lets `get_access` return or cache an access token before a newly issued refresh token is stored as a new secret version, moves that write after the return, defers it to a thread or a finally block, or catches a failed write and carries on. Defined in `get_access` (`_wr` in `src/ies_client/qbo_client.py`, `_sm_add` in `src/ies_client/qbo_client_rest.py`)."
+    },
+    {
+      "id": "ies-client-no-token-values-out",
+      "severity": "high",
+      "scope": ["src/ies_client/**"],
+      "rule": "A violating diff prints, logs or interpolates into an exception message a refresh token, an access token, a client secret, the Basic authorization value or a raw grant response, returns a refresh token or client credential from any function, or returns an access token from anything other than `get_access`; the module health check prints each entity key with its company name or its error, never a token. Defined in `src/ies_client/qbo_client.py` and `src/ies_client/qbo_client_rest.py`."
+    },
+    {
+      "id": "ies-client-explicit-entity",
+      "severity": "high",
+      "scope": ["src/ies_client/**"],
+      "rule": "A violating diff adds a call to `get_access`, `query` or `post` that omits `company`, adds a code path that falls back to `DEFAULT_COMPANY` or any other implicit entity, or changes which entity that default selects; new code names the entity on every call. Defined in `_company` in `src/ies_client/qbo_client.py` and `src/ies_client/qbo_client_rest.py`."
+    },
+    {
+      "id": "ies-client-entity-isolation",
+      "severity": "high",
+      "scope": ["src/ies_client/qbo_client.py", "src/ies_client/qbo_client_rest.py"],
+      "rule": "A violating diff lets one `COMPANIES` entry read another entity's realm, refresh-token or client-credential secret, shares one Intuit client id and secret across entities, or stores one entity's rotated refresh token or cached access token where a different entity reads it. Defined in `COMPANIES` in `src/ies_client/qbo_client.py` and `src/ies_client/qbo_client_rest.py`."
+    },
+    {
+      "id": "ies-client-refresh-fallback",
+      "severity": "medium",
+      "scope": ["src/ies_client/qbo_client.py", "src/ies_client/qbo_client_rest.py"],
+      "rule": "A violating diff keeps a refresh token beyond one `get_access` call (on disk, in a module global, in the environment or in the access-token cache), grants against the `latest` version once with no retry, drops the walk through older enabled versions on an Intuit HTTP 400, or orders those versions other than newest first. Defined in `_versions` (`src/ies_client/qbo_client.py`) and `_sm_versions` (`src/ies_client/qbo_client_rest.py`)."
+    },
+    {
+      "id": "ies-client-variant-parity",
+      "severity": "medium",
+      "scope": ["src/ies_client/qbo_client.py", "src/ies_client/qbo_client_rest.py"],
+      "rule": "A violating diff changes a public signature, a return shape, a `COMPANIES` key, a secret name, the grant request or a fallback step in only one of `src/ies_client/qbo_client.py` and `src/ies_client/qbo_client_rest.py`, although a caller may load either module for the same call. Defined in `get_access`, `query` and `post` of both modules."
+    },
+    {
+      "id": "ies-client-stdlib-only",
+      "severity": "high",
+      "scope": ["pyproject.toml", "src/ies_client/**"],
+      "rule": "A violating diff adds an entry to `dependencies` in `pyproject.toml`, imports a module outside the Python standard library under `src/ies_client/`, or makes `src/ies_client/qbo_client_rest.py` import a sibling module, which breaks running that file pasted alone into a bare container. Defined in `pyproject.toml` and the module docstring of `src/ies_client/qbo_client_rest.py`."
+    },
+    {
+      "id": "ies-client-backward-compatible-api",
+      "severity": "high",
+      "scope": ["pyproject.toml", "src/ies_client/**"],
+      "rule": "A violating diff renames or removes `get_access`, `query`, `post` or a `COMPANIES` key, renames or reorders their parameters (callers pass `company` positionally), or changes the two-item tuple that `get_access` returns, without keeping the old form working; consumers install the default branch with no tag, so a merge reaches each of them on its next build. Defined in the install line of `README.md` and the public functions under `src/ies_client/`."
+    }
+  ],
+  "disabledRules": []
+}
