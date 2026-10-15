@@ -7,11 +7,12 @@ bare-container Cloud Run jobs (no `gcloud`, no extra pip deps), use
 `qbo_client_rest.py` instead -- same public shape, built on the GCE metadata
 server + raw Secret Manager REST calls.
 
-Multi-entity: envision, enspire, loxsle, and oversight each connect through
-their OWN dedicated Intuit Developer app (envision/enspire split 2026-08-26;
-loxsle added with its own app from day one 2026-09-01; oversight = Envision
-Tech Holdings, added 2026-10-15). Select with company="envision" (default),
-"enspire", "loxsle", or "oversight", or set QBO_COMPANY in the environment.
+Multi-entity: envision, enspire, loxsle, oversight, and pv each connect
+through their OWN dedicated Intuit Developer app (envision/enspire split
+2026-08-26; loxsle added with its own app from day one 2026-09-01; oversight =
+Envision Tech Holdings and pv = Prometheus Ventures, both added 2026-10-15).
+Select with company="envision" (default), "enspire", "loxsle", "oversight", or
+"pv", or set QBO_COMPANY in the environment.
 Per-company realm/refresh-token/client-credential secrets and token caches
 keep the entities fully isolated — IAM on the per-company secrets is the
 access-control boundary.
@@ -39,6 +40,9 @@ COMPANIES = {
     "oversight": {"realm": "qbo-oversight-realm-id", "refresh": "qbo-oversight-refresh-token",
                   "client_id": "qbo-oversight-client-id", "client_secret": "qbo-oversight-client-secret",
                   "cache": ".qbo_token_cache_oversight.json"},
+    "pv": {"realm": "qbo-pv-realm-id", "refresh": "qbo-pv-refresh-token",
+           "client_id": "qbo-pv-client-id", "client_secret": "qbo-pv-client-secret",
+           "cache": ".qbo_token_cache_pv.json"},
 }
 DEFAULT_COMPANY = os.environ.get("QBO_COMPANY", "envision").lower()
 
