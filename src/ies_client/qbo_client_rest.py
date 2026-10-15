@@ -13,10 +13,11 @@ qbo-token-refresher: it only ever read `latest` once and gave up on the
 first invalid_grant with no retry).
 
 Multi-entity: same COMPANIES convention as qbo_client.py -- company="envision"
-(default), "enspire", or "loxsle", or set QBO_COMPANY in the environment.
-Each company connects through its OWN dedicated Intuit Developer app
-(envision/enspire split 2026-08-26; loxsle added with its own app from day
-one 2026-09-01) -- its own client_id/client_secret secret, not a shared pair.
+(default), "enspire", "loxsle", or "oversight", or set QBO_COMPANY in the
+environment. Each company connects through its OWN dedicated Intuit Developer
+app (envision/enspire split 2026-08-26; loxsle added with its own app from
+day one 2026-09-01; oversight = Envision Tech Holdings, added 2026-10-15) --
+its own client_id/client_secret secret, not a shared pair.
 
 Drop this file's content into a job's SCRIPT_B64 alongside job-specific logic
 (these jobs bake the whole script into an env var at deploy time -- there's
@@ -45,6 +46,8 @@ COMPANIES = {
                 "client_id": "qbo-enspire-client-id", "client_secret": "qbo-enspire-client-secret"},
     "loxsle": {"realm": "qbo-loxsle-realm-id", "refresh": "qbo-loxsle-refresh-token",
                "client_id": "qbo-loxsle-client-id", "client_secret": "qbo-loxsle-client-secret"},
+    "oversight": {"realm": "qbo-oversight-realm-id", "refresh": "qbo-oversight-refresh-token",
+                  "client_id": "qbo-oversight-client-id", "client_secret": "qbo-oversight-client-secret"},
 }
 DEFAULT_COMPANY = os.environ.get("QBO_COMPANY", "envision").lower()
 
