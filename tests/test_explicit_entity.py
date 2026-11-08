@@ -1,4 +1,5 @@
 """Entity selection must fail closed before credentials, cache or HTTP I/O."""
+import base64
 import json
 import os
 import unittest
@@ -77,13 +78,20 @@ class ExplicitEntityTests(unittest.TestCase):
                             self.assertIn(f"/company/realm-{name}/invoice?", http.call_args.args[0].full_url)
 
     def test_get_access_uses_selected_credentials(self):
+        # Secret reads echo the secret name, so the grant inputs prove which company's
+        # client credentials and refresh token were selected (not just which realm).
+        def expected_basic(cfg):
+            return base64.b64encode(f"{cfg['client_id']}:{cfg['client_secret']}".encode()).decode()
+
         for name in COMPANIES:
             cfg = qbo_client.COMPANIES[name]
-            with patch.object(qbo_client, "_rd", side_effect=lambda secret, *args: secret), patch.object(qbo_client.os.path, "exists", return_value=False), patch.object(qbo_client, "_versions", return_value=["1"]), patch.object(qbo_client, "_grant", return_value={"access_token": "fake-access"}), patch.object(qbo_client.os, "makedirs"), patch("builtins.open", unittest.mock.mock_open()):
+            with patch.object(qbo_client, "_rd", side_effect=lambda secret, *args: secret), patch.object(qbo_client.os.path, "exists", return_value=False), patch.object(qbo_client, "_versions", return_value=["1"]), patch.object(qbo_client, "_grant", return_value={"access_token": "fake-access"}) as grant, patch.object(qbo_client.os, "makedirs"), patch("builtins.open", unittest.mock.mock_open()):
                 self.assertEqual(qbo_client.get_access(name), ("fake-access", cfg["realm"]))
+                grant.assert_called_once_with(expected_basic(cfg), cfg["refresh"])
             cfg = qbo_client_rest.COMPANIES[name]
-            with patch.object(qbo_client_rest, "_gce_token", return_value="fake-metadata"), patch.object(qbo_client_rest, "_sm_get", side_effect=lambda token, secret, *args: secret), patch.object(qbo_client_rest, "_sm_versions", return_value=["1"]), patch.object(qbo_client_rest, "_grant", return_value={"access_token": "fake-access"}):
+            with patch.object(qbo_client_rest, "_gce_token", return_value="fake-metadata"), patch.object(qbo_client_rest, "_sm_get", side_effect=lambda token, secret, *args: secret), patch.object(qbo_client_rest, "_sm_versions", return_value=["1"]), patch.object(qbo_client_rest, "_grant", return_value={"access_token": "fake-access"}) as grant:
                 self.assertEqual(qbo_client_rest.get_access(name), ("fake-access", cfg["realm"]))
+                grant.assert_called_once_with(expected_basic(cfg), cfg["refresh"])
 
 
 if __name__ == "__main__":
