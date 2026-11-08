@@ -12,10 +12,10 @@ with the version-fallback loop qbo_client.py already has (the bug that hit
 qbo-token-refresher: it only ever read `latest` once and gave up on the
 first invalid_grant with no retry).
 
-Multi-entity: same COMPANIES convention as qbo_client.py -- company="envision"
-(default), "enspire", "loxsle", "oversight", or "pv", or set QBO_COMPANY in
-the environment. Each company connects through its OWN dedicated Intuit
-Developer app (envision/enspire split 2026-08-26; loxsle added with its own
+Multi-entity: same COMPANIES convention as qbo_client.py -- explicitly pass
+company="envision", "enspire", "loxsle", "oversight", or "pv" on every call.
+Scripts may opt in to QBO_COMPANY with company=from_env(). Each company
+connects through its OWN dedicated Intuit Developer app (envision/enspire split 2026-08-26; loxsle added with its own
 app from day one 2026-09-01; oversight = Envision Tech Holdings and pv =
 Prometheus Ventures, both added 2026-10-15) -- its own client_id/client_secret
 secret, not a shared pair.
@@ -25,6 +25,7 @@ Drop this file's content into a job's SCRIPT_B64 alongside job-specific logic
 no runtime import path across separate Cloud Run jobs), or run it directly
 as the daily health-check/refresh job (see __main__ below).
 """
+import logging
 import base64
 import json
 import os
@@ -52,14 +53,25 @@ COMPANIES = {
     "pv": {"realm": "qbo-pv-realm-id", "refresh": "qbo-pv-refresh-token",
            "client_id": "qbo-pv-client-id", "client_secret": "qbo-pv-client-secret"},
 }
-DEFAULT_COMPANY = os.environ.get("QBO_COMPANY", "envision").lower()
 
 
 def _company(company):
-    name = (company or DEFAULT_COMPANY).lower()
+    if not isinstance(company, str) or not company.strip():
+        raise ValueError("QBO company is required; pass company explicitly or use from_env()")
+    name = company.lower()
     if name not in COMPANIES:
         raise ValueError(f"unknown QBO company {name!r} -- one of {sorted(COMPANIES)}")
     return name, COMPANIES[name]
+
+
+def from_env():
+    """Explicitly select and return QBO_COMPANY; never supplies a default."""
+    company = os.environ.get("QBO_COMPANY")
+    if not company:
+        raise ValueError("QBO_COMPANY must be set to use from_env()")
+    name, _ = _company(company)
+    logging.getLogger(__name__).info("QBO company selected from environment: %s", name)
+    return name
 
 
 def _gce_token():

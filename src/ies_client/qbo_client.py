@@ -11,8 +11,8 @@ Multi-entity: envision, enspire, loxsle, oversight, and pv each connect
 through their OWN dedicated Intuit Developer app (envision/enspire split
 2026-08-26; loxsle added with its own app from day one 2026-09-01; oversight =
 Envision Tech Holdings and pv = Prometheus Ventures, both added 2026-10-15).
-Select with company="envision" (default), "enspire", "loxsle", "oversight", or
-"pv", or set QBO_COMPANY in the environment.
+An explicit company is required on every call: "envision", "enspire",
+"loxsle", "oversight", or "pv". Scripts may opt in with company=from_env().
 Per-company realm/refresh-token/client-credential secrets and token caches
 keep the entities fully isolated — IAM on the per-company secrets is the
 access-control boundary.
@@ -22,6 +22,7 @@ Originally lived inside gcpay-sync's own package; extracted here because it has
 nothing to do with GCPay specifically and multiple unrelated services depend
 on it -- see README for the full backstory.
 """
+import logging
 import base64, json, os, shutil, subprocess, time, urllib.parse, urllib.request, urllib.error
 
 PROJECT = "claude-mcp-457317"
@@ -44,14 +45,25 @@ COMPANIES = {
            "client_id": "qbo-pv-client-id", "client_secret": "qbo-pv-client-secret",
            "cache": ".qbo_token_cache_pv.json"},
 }
-DEFAULT_COMPANY = os.environ.get("QBO_COMPANY", "envision").lower()
 
 
 def _company(company):
-    name = (company or DEFAULT_COMPANY).lower()
+    if not isinstance(company, str) or not company.strip():
+        raise ValueError("QBO company is required; pass company explicitly or use from_env()")
+    name = company.lower()
     if name not in COMPANIES:
         raise ValueError(f"unknown QBO company {name!r} — one of {sorted(COMPANIES)}")
     return name, COMPANIES[name]
+
+
+def from_env():
+    """Explicitly select and return QBO_COMPANY; never supplies a default."""
+    company = os.environ.get("QBO_COMPANY")
+    if not company:
+        raise ValueError("QBO_COMPANY must be set to use from_env()")
+    name, _ = _company(company)
+    logging.getLogger(__name__).info("QBO company selected from environment: %s", name)
+    return name
 
 
 def _cache_path(cfg):
