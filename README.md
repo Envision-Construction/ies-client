@@ -49,3 +49,32 @@ access_token, realm = get_access(company="envision")  # or "enspire"
 ```
 
 For a `SCRIPT_B64`-style job with no pip install step at all, embed `qbo_client_rest.py`'s content directly into the job's script at deploy/build time rather than hand-rewriting the logic.
+
+## Explicit entity selection (1.0.0 breaking change)
+
+Every `get_access`, `query`, and `post` call must supply a company:
+`envision`, `enspire`, `loxsle`, `oversight`, or `pv` (case-insensitive).
+Omitting it, passing `None` or an empty name raises `ValueError` before any
+credential, cache, or network access. Setting `QBO_COMPANY` alone no longer
+changes request routing. Existing explicit positional/keyword calls still work.
+
+Scripts that intentionally use environment configuration can opt in:
+
+```python
+from ies_client.qbo_client_rest import from_env, query
+
+company = from_env()  # requires QBO_COMPANY; returns its validated name
+invoices = query("SELECT * FROM Invoice", company=company)
+```
+
+Both variants provide `from_env()`. It reads the environment at call time,
+raises for unset/empty/unknown values, and emits an INFO log containing the
+selected company name only. Configure Python logging at INFO to display it.
+There is no client object or implicit global selection. The REST module's
+health check continues to pass each named company explicitly.
+
+Run the full offline test suite with:
+
+```bash
+PYTHONPATH=src python3 -m unittest discover -s tests -v
+```
